@@ -88,9 +88,16 @@ type CustomCommandLineAttribute (name : string) =
 
 /// Sets alternative command line names.
 [<AttributeUsage(AttributeTargets.Property, AllowMultiple = true)>]
-type AltCommandLineAttribute (name : string) = 
+type AltCommandLineAttribute (names : string list) = 
     inherit Attribute ()
-    member __.Name = name
+    member __.Names = names
+    new (name:string) = AltCommandLineAttribute([name])
+
+
+//[<AttributeUsage(AttributeTargets.Property, AllowMultiple = true)>]
+//type AltCommandLineAttribute (name : string) = 
+//    inherit Attribute ()
+//    member __.Name = name
 
 /// Sets a custom AppSettings key name.
 [<AttributeUsage(AttributeTargets.Property, AllowMultiple = false)>]

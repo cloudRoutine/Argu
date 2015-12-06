@@ -63,6 +63,31 @@ A minimal parser based on the above example can be created as follows:
 
 open Nessos.Argu
 
+type BOOM (str) =
+    override __.ToString() = str
+    static member Parse str =
+        match str:string with
+        | "boom" -> BOOM str
+        | "Boom" -> BOOM str
+        | "BOOM" -> BOOM "GOES THE DYNAMITE"
+        | _      -> failwith "can't go BOOM"
+
+type POW (str) =
+    override __.ToString() = str
+    static member Parse str =
+        match str:string with
+        | "pow" -> POW str
+        | "Pow" -> POW str
+        | "POW" -> POW "MUSIC MAKES YOU LOSE CONTROL"
+        | _     -> failwith "got no POW"
+
+
+let trickyDict =
+    parserDict [
+        mkComplexParser<BOOM> ()
+        mkComplexParser<POW>  ()
+    ]
+
 type CLIArguments =
     | Working_Directory of string
     | Listener of host:string * port:int
@@ -70,6 +95,8 @@ type CLIArguments =
     | Port of int
     | Log_Level of int
     | Detach
+    | Boom of BOOM
+    | Pow of POW
 with
     interface IArgParserTemplate with
         member s.Usage =
@@ -80,9 +107,11 @@ with
             | Port _ -> "specify a primary port."
             | Log_Level _ -> "set the log level."
             | Detach _ -> "detach daemon from console."
+            | Boom b -> string b
+            | Pow z -> string z
  
 // build the argument parser
-let parser = ArgumentParser.Create<CLIArguments>()
+let parser = ArgumentParser.Create<CLIArguments>(parserDict=trickyDict)
  
 // get usage text
 let usage = parser.Usage()
@@ -94,7 +123,7 @@ let usage = parser.Usage()
 //    --help [-h|/h|/help|/?]: display this list of options.
  
 // parse given input
-let results = parser.Parse([| "--detach" ; "--listener" ; "localhost" ; "8080" |])
+let results = parser.Parse([| "--detach" ; "--listener" ; "localhost" ; "8080"; "--pow";"explode";"--BOOM"; |])
  
 // get all parsed results
 let all = results.GetAllResults() // [ Detach ; Listener ("localhost", 8080) ]
@@ -191,7 +220,7 @@ open System.Diagnostics
 let arguments : string [] = 
     parser.PrintCommandLine [ Port 42 ; Working_Directory "temp" ]
 
-Process.Start("foo.exe", String.concat " " arguments)
+//Process.Start("foo.exe", String.concat " " arguments)
 
 (**
 It can also be used to auto-generate a suitable `AppSettings` configuration file:
