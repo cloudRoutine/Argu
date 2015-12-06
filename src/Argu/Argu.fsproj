@@ -68,6 +68,8 @@
     <Compile Include="Parsers.fs" />
     <Compile Include="UnParsers.fs" />
     <Compile Include="ArgumentParser.fs" />
+    <Compile Include="File1.fs" />
+    <None Include="Experiment.fsx" />
     <None Include="paket.template" />
   </ItemGroup>
   <ItemGroup>
