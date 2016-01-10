@@ -5,7 +5,6 @@ open System.Configuration
 open System.Reflection
 open System.Xml
 open System.Xml.Linq
-
 open Microsoft.FSharp.Reflection
 open Microsoft.FSharp.Quotations
 open Microsoft.FSharp.Quotations.Patterns
@@ -14,6 +13,40 @@ open Nessos.Argu.Utils
 open Nessos.Argu.ArgInfo
 open Nessos.Argu.Parsers
 open Nessos.Argu.UnParsers
+
+[<AutoOpen>]
+module Parsers =
+
+    let inline mkComplexParser< ^a when ^a:(static member Parse:string -> ^a)>() = 
+        (typeof< ^a>, ParserInfo.Create< ^a> (typeof< ^a>.Name) (fun str -> 
+            (^a:(static member Parse:string -> ^a) str)) string)
+
+    let parserDict (psrs:(Type*(string option -> ParserInfo)) seq) = dict psrs
+
+
+
+
+module internal help =
+    open System.Collections.Generic
+    let getUnionCaseTree<'union when 'union :> IArgParserTemplate> () =   
+        let unionCache = Dictionary<string,UnionCaseInfo>()
+        let toplevel = FSharpType.GetUnionCases(typeof<'union>, bindingFlags = allBindings) 
+        let rec loop (proc:UnionCaseInfo []) = 
+            proc  |> Array.iter (fun caseInfo ->
+                let nestedTypes = caseInfo.GetFields()
+                let subUnions = 
+                    nestedTypes |> Array.filter (fun c -> FSharpType.IsUnion c.PropertyType)
+                    |> Array.collect (fun u -> FSharpType.GetUnionCases( u.PropertyType, bindingFlags= allBindings))
+                match subUnions with
+                | [||] -> 
+                    if unionCache.ContainsKey caseInfo.Name then () else
+                    unionCache.Add (caseInfo.Name , caseInfo)
+                | scs  -> loop scs
+            )
+        loop toplevel
+        unionCache |> Seq.map (fun x-> x.Value) |> Array.ofSeq
+open help 
+open System.Collections.Generic
 
 /// <summary>
 ///     Argu static methods
@@ -25,20 +58,26 @@ type ArgumentParser =
     ///     which must be an F# Discriminated Union.
     /// </summary>
     /// <param name="usageText">Specify a usage text to prefixed at the '--help' output.</param>
-    static member Create<'Template when 'Template :> IArgParserTemplate>(?usageText : string) =
-        new ArgumentParser<'Template>(?usageText = usageText)
+    static member Create<'Template when 'Template :> IArgParserTemplate>(?usageText : string, ?parserDict:IDictionary<Type,(string option -> ParserInfo)>) =
+        new ArgumentParser<'Template>(?usageText = usageText, ?trickyDict = parserDict)
+
 
 /// The Argu type generates an argument parser given a type argument
 /// that is an F# discriminated union. It can then be used to parse command line arguments
 /// or XML configuration.
-and ArgumentParser<'Template when 'Template :> IArgParserTemplate> internal (?usageText : string) =
+and ArgumentParser<'Template when 'Template :> IArgParserTemplate> internal (?usageText : string,?trickyDict:IDictionary<Type,(string option -> ParserInfo)> ) =
     do 
         if not <| FSharpType.IsUnion(typeof<'Template>, bindingFlags = allBindings) then
             invalidArg typeof<'Template>.Name "Argu: template type inaccessible or not F# DU."
 
+    let parserDict = 
+        match trickyDict with        
+        | Some d -> d  
+        | None   -> dict []
+
     let argInfo =
         FSharpType.GetUnionCases(typeof<'Template>, bindingFlags = allBindings)
-        |> Seq.map preComputeArgInfo
+        |> Seq.map (preComputeArgInfo parserDict)
         |> Seq.sortBy (fun a -> a.UCI.Tag)
         |> Seq.toList
 
@@ -46,9 +85,9 @@ and ArgumentParser<'Template when 'Template :> IArgParserTemplate> internal (?us
 
     let clArgIdx =
         argInfo
-        |> Seq.map (fun aI -> aI.CommandLineNames |> Seq.map (fun name -> name, aI))
-        |> Seq.concat
+        |> Seq.collect (fun aI -> aI.CommandLineNames |> Seq.map (fun name -> name, aI))
         |> Map.ofSeq
+        |> fun x -> printfn "clArgIdx %A" x; x
 
     let (|ParserExn|_|) (e : exn) =
         match e with
@@ -223,9 +262,8 @@ and ParseResults<'Template when 'Template :> IArgParserTemplate>
     member __.GetAllResults (?source : ParseSource) : 'Template list = 
         results 
         |> Seq.collect (fun (KeyValue(_,(_,rs))) -> rs)
-        |> Seq.filter (restrictF source)
-        |> Seq.map (fun r -> r.Value)
-        |> Seq.toList
+        |> Seq.fold (fun acc elm -> if restrictF source elm then elm.Value::acc else acc) []
+
 
     /// <summary>Returns the *last* specified parameter of given type, if it exists. 
     ///          Command line parameters have precedence over AppSettings parameters.</summary>
