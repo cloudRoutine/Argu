@@ -149,3 +149,16 @@ module internal Utils =
             let b = new StringBuilder ()
             do f b
             b.ToString ()
+
+
+type ConsoleBuilder () =
+    do
+        Console.InputEncoding <- Encoding.UTF8
+
+
+    member __.Zero () = ()
+
+
+
+
+ 
