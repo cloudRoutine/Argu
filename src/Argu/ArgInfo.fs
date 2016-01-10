@@ -1,4 +1,4 @@
-﻿module internal Argu.ArgInfo
+﻿module Argu.ArgInfo
 
 open System
 open System.IO

@@ -3,7 +3,7 @@
 #r "System.Xml.Linq"
 #r @"../../bin/net40/argu.dll"
 #else
-module internal Nessos.Argu.Proposal
+module internal Argu.Proposal
 
 #endif
 
@@ -18,7 +18,7 @@ open System
 open System.Collections.Generic
 open System.Text
 open System.Text.RegularExpressions
-open Nessos.Argu
+open Argu
 
 [<AutoOpen>]
 module Utils =
