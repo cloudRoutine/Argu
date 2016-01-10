@@ -88,6 +88,31 @@ let trickyDict =
         mkComplexParser<POW>  ()
     ]
 
+type BOOM (str) =
+    override __.ToString() = str
+    static member Parse str =
+        match str:string with
+        | "boom" -> BOOM str
+        | "Boom" -> BOOM str
+        | "BOOM" -> BOOM "GOES THE DYNAMITE"
+        | _      -> failwith "can't go BOOM"
+
+type POW (str) =
+    override __.ToString() = str
+    static member Parse str =
+        match str:string with
+        | "pow" -> POW str
+        | "Pow" -> POW str
+        | "POW" -> POW "MUSIC MAKES YOU LOSE CONTROL"
+        | _     -> failwith "got no POW"
+
+
+let trickyDict =
+    parserDict [
+        mkComplexParser<BOOM> ()
+        mkComplexParser<POW>  ()
+    ]
+
 type CLIArguments =
     | Working_Directory of string
     | Listener of host:string * port:int

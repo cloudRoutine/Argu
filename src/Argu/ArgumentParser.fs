@@ -48,6 +48,40 @@ module internal help =
 open help 
 open System.Collections.Generic
 
+[<AutoOpen>]
+module Parsers =
+
+    let inline mkComplexParser< ^a when ^a:(static member Parse:string -> ^a)>() = 
+        (typeof< ^a>, ParserInfo.Create< ^a> (typeof< ^a>.Name) (fun str -> 
+            (^a:(static member Parse:string -> ^a) str)) string)
+
+    let parserDict (psrs:(Type*(string option -> ParserInfo)) seq) = dict psrs
+
+
+
+
+module internal help =
+    open System.Collections.Generic
+    let getUnionCaseTree<'union when 'union :> IArgParserTemplate> () =   
+        let unionCache = Dictionary<string,UnionCaseInfo>()
+        let toplevel = FSharpType.GetUnionCases(typeof<'union>, bindingFlags = allBindings) 
+        let rec loop (proc:UnionCaseInfo []) = 
+            proc  |> Array.iter (fun caseInfo ->
+                let nestedTypes = caseInfo.GetFields()
+                let subUnions = 
+                    nestedTypes |> Array.filter (fun c -> FSharpType.IsUnion c.PropertyType)
+                    |> Array.collect (fun u -> FSharpType.GetUnionCases( u.PropertyType, bindingFlags= allBindings))
+                match subUnions with
+                | [||] -> 
+                    if unionCache.ContainsKey caseInfo.Name then () else
+                    unionCache.Add (caseInfo.Name , caseInfo)
+                | scs  -> loop scs
+            )
+        loop toplevel
+        unionCache |> Seq.map (fun x-> x.Value) |> Array.ofSeq
+open help 
+open System.Collections.Generic
+
 /// <summary>
 ///     Argu static methods
 /// </summary>
