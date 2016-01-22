@@ -23,8 +23,8 @@ type ErrorCode =
     | PostProcess = 4
 
 /// IComparable UnionCaseInfo wrapper
-type internal ArgId(uci : UnionCaseInfo) =
-    inherit ProjectionComparison<ArgId,int>(uci.Tag)
+type internal ArgId (uci:UnionCaseInfo) =
+    inherit ProjectionComparison<ArgId,int> (uci.Tag)
     member __.UCI = uci
     override __.ToString() = uci.Name
 
@@ -158,7 +158,7 @@ let uciToAppConf (uci : UnionCaseInfo) =
 
 /// get CL arguments from environment
 let getEnvArgs () =
-    match System.Environment.GetCommandLineArgs() with
+    match System.Environment.GetCommandLineArgs () with
     | [||] -> [||]
     | args -> args.[1..]
 
@@ -202,12 +202,21 @@ let primitiveParsers =
 #else
         mkParser "bigint" System.Numerics.BigInteger.Parse string
 #endif
-        mkParser "guid" (fun s -> Guid(s)) string
+        mkParser "guid" (fun s -> Guid s) string
 
         mkParser "base64" Convert.FromBase64String Convert.ToBase64String
     ]
 
+let (|Fn1|_|) _ = Some "1"
+let (|Fn2|_|) _ = Some "2"
+let (|Fn3|_|) _ = Some "3"
+let (|Fn4|_|) _ = Some "4"
 
+let `` and + or `` x =
+    match x with 
+    | Fn1 a & Fn2 b
+    | Fn3 a & Fn4 b -> sprintf "%A + %A" a b
+    | _ -> "tricksy business"
 
 
 /// recognize exprs that strictly contain DU constructors
@@ -236,7 +245,7 @@ let internal preComputeArgInfo (parserDict:Collections.Generic.IDictionary<_,_> 
         caseCtor dummyFields :?> IArgParserTemplate
 
     let commandLineArgs =
-        if uci.ContainsAttr<NoCommandLineAttribute> (true) then []
+        if uci.ContainsAttr<NoCommandLineAttribute> true then []
         else
             let defName =
                 match uci.GetAttrs<CustomCommandLineAttribute> () |> List.tryLast with
@@ -247,7 +256,7 @@ let internal preComputeArgInfo (parserDict:Collections.Generic.IDictionary<_,_> 
                 uci.GetAttrs<AltCommandLineAttribute> ()
                 |> List.collect (fun attr -> attr.Names)
 
-            let clNames = defName :: altNames
+            let clNames = defName::altNames
 
             for name in clNames do
                 if hasCommandLineParam helpInfo name then
@@ -259,7 +268,7 @@ let internal preComputeArgInfo (parserDict:Collections.Generic.IDictionary<_,_> 
             clNames
 
     let AppSettingsName =
-        if uci.ContainsAttr<NoAppSettingsAttribute> (true) then None
+        if uci.ContainsAttr<NoAppSettingsAttribute> true then None
         else
             match uci.GetAttrs<CustomAppSettingsAttribute> () |> List.tryLast with
             | None -> Some <| uciToAppConf uci
@@ -269,7 +278,7 @@ let internal preComputeArgInfo (parserDict:Collections.Generic.IDictionary<_,_> 
     if AppSettingsName.IsNone && commandLineArgs.IsEmpty then
         failwithf "Argu: parameter '%s' needs to have at least one parse source." uci.Name
 
-    let printLabels = uci.ContainsAttr<PrintLabelsAttribute> (true)
+    let printLabels = uci.ContainsAttr<PrintLabelsAttribute> true
 
     let parsers =
         let getParser (p : PropertyInfo) =
@@ -294,12 +303,12 @@ let internal preComputeArgInfo (parserDict:Collections.Generic.IDictionary<_,_> 
             Some ctor
 
     let AppSettingsCSV = uci.ContainsAttr<ParseCSVAttribute> ()
-    let mandatory = uci.ContainsAttr<MandatoryAttribute> (true)
+    let mandatory = uci.ContainsAttr<MandatoryAttribute> true
     let gatherAll = uci.ContainsAttr<GatherAllSourcesAttribute> ()
     let isRest = uci.ContainsAttr<RestAttribute> ()
     let isHidden = uci.ContainsAttr<HiddenAttribute> ()
     let isEqualsAssignment =
-        if uci.ContainsAttr<EqualsAssignmentAttribute> (true) then
+        if uci.ContainsAttr<EqualsAssignmentAttribute> true then
             if types.Length <> 1 then
                 failwithf "Argu: Parameter '%s' has EqualsAssignment attribute but has arity <> 1." uci.Name
             elif isRest then

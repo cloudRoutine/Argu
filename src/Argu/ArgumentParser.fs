@@ -17,13 +17,25 @@ open Argu.UnParsers
 [<AutoOpen>]
 module MakeParser =
 
-    let inline mkComplexParser< ^a when ^a:(static member Parse:string -> ^a)>() = 
+    type ICustomParser = interface end
+
+    type ICustomParser<'T> =
+        inherit ICustomParser
+        abstract Parse : string -> 'T
+        abstract UnParse : 'T -> string
+
+
+    let parser<'T> parsefn unparsefn =
+        { new ICustomParser<'T> with
+            member __.Parse str = parsefn str
+            member __.UnParse v = unparsefn v
+        }
+
+    let inline mkParser< ^a when ^a:(static member Parse:string -> ^a)>() = 
         (typeof< ^a>, ParserInfo.Create< ^a> (typeof< ^a>.Name) (fun str -> 
             (^a:(static member Parse:string -> ^a) str)) string)
 
     let parserDict (psrs:(Type*(string option -> ParserInfo)) seq) = dict psrs
-
-
 
 
 module internal help =

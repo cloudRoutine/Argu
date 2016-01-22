@@ -19,39 +19,42 @@ module internal Utils =
     /// gets the top-Level methodInfo call in a quotation
     let rec getMethod =
         function
-        | Lambda(_,e) -> getMethod e
-        | Call(_,f,_) -> f
+        | Lambda (_,e) -> getMethod e
+        | Call (_,f,_) -> f
         | _ -> invalidArg "expr" "quotation is not of method."
 
     /// reflected version of Unchecked.defaultof
     type Unchecked =
         static member DefaultOf<'T> () = Unchecked.defaultof<'T>
-        static member UntypedDefaultOf(t : Type) =
+        static member UntypedDefaultOf (t:Type) =
             typeof<Unchecked>
                 .GetMethod("DefaultOf", BindingFlags.NonPublic ||| BindingFlags.Static)
                 .MakeGenericMethod([| t |])
                 .Invoke(null, [||])
 
+    type Type with
+        member self.GetCustomAttributes<'T> () = self.GetCustomAttributes (typeof<'T>, false)         
+
     type UnionCaseInfo with
-        member uci.GetAttrs<'T when 'T :> Attribute> (?includeDeclaringTypeAttrs) =
+        member uci.GetCustomAttributes<'T> () = uci.GetCustomAttributes (typeof<'T>)
+
+        member uci.GetAttrs<'T when 'T :> Attribute> ?includeDeclaringTypeAttrs =
             let includeDeclaringTypeAttrs = defaultArg includeDeclaringTypeAttrs false
-
-            let attrs = uci.GetCustomAttributes(typeof<'T>) |> Seq.map (fun o -> o :?> 'T)
-
+            let attrs = uci.GetCustomAttributes<'T>() |> Seq.map (fun o -> o :?> 'T)
             if includeDeclaringTypeAttrs then
-                let parentAttrs = uci.DeclaringType.GetCustomAttributes(typeof<'T>, false)  |> Seq.map (fun o -> o :?> 'T)
+                let parentAttrs = uci.DeclaringType.GetCustomAttributes<'T> () |> Seq.map (fun o -> o :?> 'T)
                 Seq.append parentAttrs attrs |> Seq.toList
             else
                 Seq.toList attrs
 
         member uci.ContainsAttr<'T when 'T :> Attribute> (?includeDeclaringTypeAttrs) =
-            let includeDeclaringTypeAttrs = defaultArg includeDeclaringTypeAttrs false
-
+            let includeDeclaringTypeAttrs = 
+                defaultArg includeDeclaringTypeAttrs false
             if includeDeclaringTypeAttrs then
-                uci.DeclaringType.GetCustomAttributes(typeof<'T>, false) |> Seq.isEmpty |> not
-                    || uci.GetCustomAttributes(typeof<'T>) |> Seq.isEmpty |> not
+                uci.DeclaringType.GetCustomAttributes<'T>() |> Seq.isEmpty |> not
+                || uci.GetCustomAttributes<'T> () |> Seq.isEmpty |> not
             else
-                uci.GetCustomAttributes(typeof<'T>) |> Seq.isEmpty |> not
+                uci.GetCustomAttributes<'T> () |> Seq.isEmpty |> not
 
     [<RequireQualifiedAccess>]
     module List =
@@ -60,14 +63,14 @@ module internal Utils =
             match xs with
             | [] -> invalidArg "xs" "input list is empty."
             | [x] -> x
-            | _ :: rest -> last rest
+            | _::rest -> last rest
 
         /// try fetching last element of a list
         let rec tryLast xs =
             match xs with
             | [] -> None
             | [x] -> Some x
-            | _ :: rest -> tryLast rest
+            | _::rest -> tryLast rest
 
         /// <summary>
         ///     returns `Some (map f ts)` iff `(forall t) ((f t).IsSome)`
@@ -78,11 +81,10 @@ module internal Utils =
             let rec gather acc rest =
                 match rest with
                 | [] -> Some <| List.rev acc
-                | h :: t ->
+                | h::t ->
                     match f h with
                     | Some s -> gather (s :: acc) t
                     | None -> None
-
             gather [] ts
 
         /// Map active pattern combinator
@@ -121,7 +123,6 @@ module internal Utils =
         override x.GetHashCode() = hash token
 
     // string monad
-
     type StringBuilderM = StringBuilder -> unit
 
     type StringExprBuilder () =
@@ -145,16 +146,12 @@ module internal Utils =
 
     [<RequireQualifiedAccess>]
     module String =
-        let build (f : StringBuilderM) =
-            let b = new StringBuilder ()
-            do f b
-            b.ToString ()
-
+        let build (f:StringBuilderM) =
+            f (StringBuilder ()) |> string
 
 type ConsoleBuilder () =
     do
         Console.InputEncoding <- Encoding.UTF8
-
 
     member __.Zero () = ()
 

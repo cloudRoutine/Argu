@@ -7,43 +7,31 @@ module internal Argu.Proposal
 
 #endif
 
-open System.Reflection
-open System.Runtime.Serialization.Formatters.Binary
 open Microsoft.FSharp.Reflection
 open Microsoft.FSharp.Quotations
-open Microsoft.FSharp.Quotations.Patterns
-open Microsoft.FSharp.Quotations.ExprShape
-open Microsoft.FSharp.Quotations.DerivedPatterns
 open System
-open System.Collections.Generic
-open System.Text
-open System.Text.RegularExpressions
 open Argu
 
 [<AutoOpen>]
 module Utils =
-    open System.IO
     open System.Collections.Generic
     open System.Text
     open System.Reflection
-
-    open System.Xml
-    open System.Xml.Linq
-
     open Microsoft.FSharp.Quotations.Patterns
+
     let allBindings = BindingFlags.NonPublic ||| BindingFlags.Public ||| BindingFlags.Static ||| BindingFlags.Instance
 
     /// gets the top-Level methodInfo call in a quotation
     let rec getMethod =
         function
-        | Lambda(_,e) -> getMethod e
-        | Call(_,f,_) -> f
+        | Lambda (_,e) -> getMethod e
+        | Call (_,f,_) -> f
         | _ -> invalidArg "expr" "quotation is not of method."
 
     /// reflected version of Unchecked.defaultof
     type Unchecked =
         static member DefaultOf<'T> () = Unchecked.defaultof<'T>
-        static member UntypedDefaultOf(t : Type) =
+        static member UntypedDefaultOf (t:Type) =
             typeof<Unchecked>
                 .GetMethod("DefaultOf", BindingFlags.NonPublic ||| BindingFlags.Static)
                 .MakeGenericMethod([| t |])
@@ -52,23 +40,20 @@ module Utils =
     type UnionCaseInfo with
         member uci.GetAttrs<'T when 'T :> Attribute> (?includeDeclaringTypeAttrs) =
             let includeDeclaringTypeAttrs = defaultArg includeDeclaringTypeAttrs false
-
-            let attrs = uci.GetCustomAttributes(typeof<'T>) |> Seq.map (fun o -> o :?> 'T)
-
+            let attrs = uci.GetCustomAttributes (typeof<'T>) |> Seq.map (fun o -> o :?> 'T)
             if includeDeclaringTypeAttrs then
-                let parentAttrs = uci.DeclaringType.GetCustomAttributes(typeof<'T>, false)  |> Seq.map (fun o -> o :?> 'T)
+                let parentAttrs = uci.DeclaringType.GetCustomAttributes (typeof<'T>, false)  |> Seq.map (fun o -> o :?> 'T)
                 Seq.append parentAttrs attrs |> Seq.toList
             else
                 Seq.toList attrs
 
         member uci.ContainsAttr<'T when 'T :> Attribute> (?includeDeclaringTypeAttrs) =
             let includeDeclaringTypeAttrs = defaultArg includeDeclaringTypeAttrs false
-
             if includeDeclaringTypeAttrs then
-                uci.DeclaringType.GetCustomAttributes(typeof<'T>, false) |> Seq.isEmpty |> not
-                    || uci.GetCustomAttributes(typeof<'T>) |> Seq.isEmpty |> not
+                uci.DeclaringType.GetCustomAttributes (typeof<'T>, false) |> Seq.isEmpty |> not
+                    || uci.GetCustomAttributes (typeof<'T>) |> Seq.isEmpty |> not
             else
-                uci.GetCustomAttributes(typeof<'T>) |> Seq.isEmpty |> not
+                uci.GetCustomAttributes (typeof<'T>) |> Seq.isEmpty |> not
 
     [<RequireQualifiedAccess>]
     module List =
@@ -77,14 +62,14 @@ module Utils =
             match xs with
             | [] -> invalidArg "xs" "input list is empty."
             | [x] -> x
-            | _ :: rest -> last rest
+            | _::rest -> last rest
 
         /// try fetching last element of a list
         let rec tryLast xs =
             match xs with
             | [] -> None
             | [x] -> Some x
-            | _ :: rest -> tryLast rest
+            | _::rest -> tryLast rest
 
         /// <summary>
         ///     returns `Some (map f ts)` iff `(forall t) ((f t).IsSome)`
@@ -95,9 +80,9 @@ module Utils =
             let rec gather acc rest =
                 match rest with
                 | [] -> Some <| List.rev acc
-                | h :: t ->
+                | h::t ->
                     match f h with
-                    | Some s -> gather (s :: acc) t
+                    | Some s -> gather (s::acc) t
                     | None -> None
 
             gather [] ts
@@ -109,11 +94,11 @@ module Utils =
         let (|TryMap|_|) f xs = tryMap f xs
 
 
-    type ParserCom<'T> = (string -> 'T ) * ('T-> string)
+    type 'T ParserCom = (string -> 'T) * ('T-> string)
 
     [<RequireQualifiedAccess>]
     module Boolean =
-        let tryParse (inp : string) =
+        let tryParse (inp:string) =
             let ok, b = Boolean.TryParse inp
             if ok then Some b
             else None
@@ -138,7 +123,7 @@ module Utils =
             | :? ProjectionComparison<'Id, 'Cmp> as y -> token = y.ComparisonToken
             | _ -> false
 
-        override x.GetHashCode() = hash token
+        override x.GetHashCode () = hash token
 
     // string monad
 

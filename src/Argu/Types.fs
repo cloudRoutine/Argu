@@ -36,6 +36,8 @@ and ProcessExiter() =
             do System.Console.Error.Flush()
             Microsoft.FSharp.Core.Operators.exit (defaultArg errorCode 1)
 
+
+
 // Attribute declarations
 
 open System
@@ -80,7 +82,7 @@ type PrintLabelsAttribute () = inherit Attribute ()
 [<AttributeUsage(AttributeTargets.Class ||| AttributeTargets.Property, AllowMultiple = false)>]
 type EqualsAssignmentAttribute () = inherit Attribute ()
 
-/// Sets a custom command line name.
+/// Sets a custom defualt command line name instead of the Union case name.
 [<AttributeUsage(AttributeTargets.Property, AllowMultiple = false)>]
 type CustomCommandLineAttribute (name : string) =
     inherit Attribute ()
